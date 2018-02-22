@@ -14,8 +14,14 @@ ext = '.pyx' if USE_CYTHON else '.c'
 
 if os.getenv('CYTHON_TRACE'):
     macros = [('CYTHON_TRACE', '1')]
+    from Cython.Compiler.Options import get_directive_defaults
+    get_directive_defaults()['linetrace'] = True
 else:
     macros = []
+
+if os.getenv('CYTHON_PROFILE'):
+    from Cython.Compiler.Options import get_directive_defaults
+    get_directive_defaults()['profile'] = True
 
 ext_modules = [
     Extension('kerl.kerl', ['kerl/kerl' + ext], define_macros=macros),

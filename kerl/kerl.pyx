@@ -1,5 +1,3 @@
-# cython: linetrace=True
-
 from sha3 import keccak_384
 
 from . import conv

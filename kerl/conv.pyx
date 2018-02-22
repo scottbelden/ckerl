@@ -1,5 +1,3 @@
-# cython: linetrace=True
-
 BYTE_HASH_LENGTH = 48
 TRIT_HASH_LENGTH = 243
 

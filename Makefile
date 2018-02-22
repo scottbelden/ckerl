@@ -18,7 +18,6 @@ all: $(c_files)
 clean:
 	rm -fv $(c_files)
 	rm -fv kerl/*.so
-	rm -fv kerl/*.html
 
 fresh: clean all
 
