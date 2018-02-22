@@ -1,11 +1,21 @@
 import random
 import csv
+import os
 import sha3
 
 import pytest
 
 from kerl import conv
 from kerl.kerl import Kerl
+
+
+@pytest.fixture
+def profile():
+    # The tests that verify the files take an extremely long time to run with
+    # line profiling on. Therefore, we run the tests normally without the
+    # PROFILE_ON set to ensure validity and then run again with PROFILE_ON
+    # to check the coverage.
+    return os.getenv('PROFILE_ON')
 
 
 def test_correct_hash_function():
@@ -112,7 +122,7 @@ def test_all_bytes():
     for i in range(-128, 128):
         in_bytes = [i] * 48
         trits = conv.convertToTrits(in_bytes)
-        out_bytes = conv.convertToBytes(trits)
+        out_bytes = conv.trits_to_bytes(trits)
 
         assert in_bytes == out_bytes
 
@@ -120,13 +130,13 @@ def test_all_bytes():
 def test_random_trits():
     in_trits = [random.randrange(-1, 2) for _ in range(243)]
     in_trits[242] = 0
-    in_bytes = conv.convertToBytes(in_trits)
+    in_bytes = conv.trits_to_bytes(in_trits)
     out_trits = conv.convertToTrits(in_bytes)
 
     assert in_trits == out_trits
 
 
-def test_generate_trytes_hash():
+def test_generate_trytes_hash(profile):
     file = 'tests/test_files/generateTrytesAndHashes'
     with open(file, 'r') as f:
         reader = csv.DictReader(f)
@@ -145,8 +155,11 @@ def test_generate_trytes_hash():
 
             assert hashes == trytes_out, f'line:{count + 2} {hashes}!={trytes_out}'
 
+            if profile:
+                break
 
-def test_generate_multitrytes_and_hash():
+
+def test_generate_multitrytes_and_hash(profile):
     file = 'tests/test_files/generateMultiTrytesAndHash'
     with open(file, 'r') as f:
         reader = csv.DictReader(f)
@@ -165,8 +178,11 @@ def test_generate_multitrytes_and_hash():
 
             assert hashes == trytes_out, f'line:{count + 2} {hashes}!={trytes_out}'
 
+            if profile:
+                break
 
-def test_generate_trytes_and_multisqueeze():
+
+def test_generate_trytes_and_multisqueeze(profile):
     file = 'tests/test_files/generateTrytesAndMultiSqueeze'
     with open(file, 'r') as f:
         reader = csv.DictReader(f)
@@ -195,3 +211,6 @@ def test_generate_trytes_and_multisqueeze():
             kerl.squeeze(trits_out)
             trytes_out = conv.trits_to_trytes(trits_out)
             assert hashes3 == trytes_out, f'line:{count + 2} {hashes3}!={trytes_out}'
+
+            if profile:
+                break

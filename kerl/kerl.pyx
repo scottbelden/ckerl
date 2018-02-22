@@ -47,7 +47,7 @@ class Kerl:
             if stop - offset == TRIT_HASH_LENGTH:
                 trits[stop - 1] = 0
 
-            signed_nums = conv.convertToBytes(trits[offset:stop])
+            signed_nums = conv.trits_to_bytes(trits[offset:stop])
 
             # Convert signed bytes into their equivalent unsigned representation
             # In order to use Python's built-in bytes type

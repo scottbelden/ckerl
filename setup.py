@@ -36,7 +36,7 @@ setup(
     name = 'kerl',
     description = 'Cython implementation of Kerl',
     url = 'https://github.com/scottbelden/kerl',
-    version = '0.0.1',
+    version = '0.0.2',
     packages = ['kerl'],
     ext_modules = ext_modules,
     install_requires = install_requires,
