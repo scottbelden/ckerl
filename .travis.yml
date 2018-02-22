@@ -3,6 +3,6 @@ sudo: false
 python:
     - 3.6
 install:
-    - pip install pytest flake8 cython
+    - pip install pytest flake8 cython coverage
 script:
     - ./run_tests.sh
