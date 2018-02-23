@@ -1,3 +1,5 @@
+from .conv cimport convert_sign
+
 from sha3 import keccak_384
 
 from . import conv
@@ -6,8 +8,8 @@ __all__ = [
     'Kerl',
 ]
 
-BYTE_HASH_LENGTH = 48
-TRIT_HASH_LENGTH = 243
+DEF BYTE_HASH_LENGTH = 48
+DEF TRIT_HASH_LENGTH = 243
 
 class Kerl:
 
@@ -51,13 +53,13 @@ class Kerl:
 
             # Convert signed bytes into their equivalent unsigned representation
             # In order to use Python's built-in bytes type
-            unsigned_bytes = bytearray(conv.convert_sign(b) for b in signed_nums)
+            unsigned_bytes = bytearray(convert_sign(b) for b in signed_nums)
 
             self.k.update(unsigned_bytes)
 
             offset += TRIT_HASH_LENGTH
 
-    def squeeze(self, trits, offset=0, length=None):
+    def squeeze(self, trits, int offset=0, int length=0):
         """
         Squeeze trits from the sponge into a buffer.
 
@@ -77,29 +79,31 @@ class Kerl:
         """
         # Pad input if necessary, so that it can be divided evenly into
         # hashes.
-        pad = ((len(trits) % TRIT_HASH_LENGTH) or TRIT_HASH_LENGTH)
+        cdef int len_trits = len(trits)
+        cdef int pad = (len_trits % TRIT_HASH_LENGTH) or TRIT_HASH_LENGTH
         trits += [0] * (TRIT_HASH_LENGTH - pad)
 
-        if length is None:
+        if length == 0:
             # By default, we will try to squeeze one hash.
             # Note that this is different than ``absorb``.
-            length = len(trits) or TRIT_HASH_LENGTH
+            length = len_trits or TRIT_HASH_LENGTH
 
         if length < 1:
             raise ValueError(f'trits length of {length} must be greater than zero')
 
+        cdef int stop
         while offset < length:
             unsigned_hash = self.k.digest()
 
-            signed_hash = [conv.convert_sign(b) for b in unsigned_hash]
+            signed_hash = [convert_sign(b) for b in unsigned_hash]
 
             trits_from_hash = conv.convertToTrits(signed_hash)
             trits_from_hash[TRIT_HASH_LENGTH - 1] = 0
 
-            stop = min(TRIT_HASH_LENGTH, length-offset)
+            stop = min(TRIT_HASH_LENGTH, length - offset)
             trits[offset:offset+stop] = trits_from_hash[0:stop]
 
-            flipped_bytes = bytearray(conv.convert_sign(~b) for b in unsigned_hash)
+            flipped_bytes = bytearray(convert_sign(~b) for b in unsigned_hash)
 
             # Reset internal state before feeding back in
             self.reset()

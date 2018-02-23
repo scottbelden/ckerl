@@ -1,8 +1,8 @@
 cimport cython
 from libc.stdlib cimport malloc, free
 
-BYTE_HASH_LENGTH = 48
-TRIT_HASH_LENGTH = 243
+DEF BYTE_HASH_LENGTH = 48
+DEF TRIT_HASH_LENGTH = 243
 
 tryte_table = {
         '9': [ 0,  0,  0],  #   0
@@ -76,7 +76,7 @@ def trits_to_bytes(trits):
         trits_array[i] = trits[len_trits - 1 - i]
 
     # trits will first be converted to bytes in little endian format
-    cdef int little_endian_bytes[48]
+    cdef int little_endian_bytes[BYTE_HASH_LENGTH]
     little_endian_bytes[:] = [
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -135,7 +135,7 @@ def trits_to_bytes(trits):
         # only have a value for the first byte in the array, so there's no need
         # to multiply all the other 0 value bytes by 3.
         carry = 0
-        for j in range(48):
+        for j in range(BYTE_HASH_LENGTH):
             if j > max_byte_index:
                 break
 
@@ -165,21 +165,21 @@ def trits_to_bytes(trits):
 
     free(trits_array)
 
-    cdef int bytesArray[48]
+    cdef int bytesArray[BYTE_HASH_LENGTH]
 
     # Change the array to big endian and balanced
-    for i in range(48):
+    for i in range(BYTE_HASH_LENGTH):
         if little_endian_bytes[i] <= 0x7F:
-            bytesArray[48 - 1 - i] = little_endian_bytes[i]
+            bytesArray[BYTE_HASH_LENGTH - 1 - i] = little_endian_bytes[i]
         else:
-            bytesArray[48 - 1 - i] = little_endian_bytes[i] - 0x100
+            bytesArray[BYTE_HASH_LENGTH - 1 - i] = little_endian_bytes[i] - 0x100
 
     # If we had a negative number now we fix the byte array by doing
     # 1s complement and adding one
     cdef int add
     if sign < 0:
         # 1s complement
-        for i in range(48):
+        for i in range(BYTE_HASH_LENGTH):
             bytesArray[i] = ~bytesArray[i]
 
         # add 1
@@ -216,16 +216,17 @@ def convertBytesToBigInt(ba):
     return sum((x & 0xFF) << pos * 8 for (pos, x) in
                enumerate(reversed(bytesArray))) * signum
 
-def convertBigintToBase(bigInt, base, length):
+def convertBigintToBase(bigInt, int base, int length):
     result = []
 
-    is_negative = bigInt < 0
+    cdef int is_negative = bigInt < 0
     quotient = abs(bigInt)
 
-    MAX = (base-1) // 2
+    cdef int MAX = (base-1) // 2
     if is_negative:
         MAX = base // 2
 
+    cdef int i, remainder
     for i in range(length):
         quotient, remainder = divmod(quotient, base)
 
@@ -241,7 +242,7 @@ def convertBigintToBase(bigInt, base, length):
 
     return result
 
-def convert_sign(byte):
+cdef int convert_sign(int byte):
     """
     Convert between signed and unsigned bytes
     """

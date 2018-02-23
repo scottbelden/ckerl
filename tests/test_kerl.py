@@ -102,7 +102,7 @@ def test_absorb_0_length():
         assert str(e) == 'trits length of 0 must be greater than zero'
 
 
-def test_squeeze_0_length():
+def test_squeeze_invalid_length():
     inp = (
         'G9JYBOMPUXHYHKSNRNMMSSZCSHOFYOYNZRSZMAAYWDYEIMVVOGKPJBVBM9TDPULSFUNMTVXRKFIDOHUXX'
         + 'VYDLFSZYZTWQYTE9SPYYWYTXJYQ9IFGYOLZXWZBKWZN9QOOTBQMWMUBLEWUEEASRHRTNIQWJQNDWRYLCA'
@@ -114,7 +114,7 @@ def test_squeeze_0_length():
     kerl.absorb(trits)
     trits_out = []
     with pytest.raises(ValueError) as e:
-        kerl.squeeze(trits_out, length=0)
+        kerl.squeeze(trits_out, length=-1)
         assert str(e) == 'trits length of 0 must be greater than zero'
 
 
