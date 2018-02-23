@@ -97,7 +97,7 @@ class Kerl:
 
             signed_hash = [convert_sign(b) for b in unsigned_hash]
 
-            trits_from_hash = conv.convertToTrits(signed_hash)
+            trits_from_hash = conv.bytes_to_trits(signed_hash)
             trits_from_hash[TRIT_HASH_LENGTH - 1] = 0
 
             stop = min(TRIT_HASH_LENGTH, length - offset)

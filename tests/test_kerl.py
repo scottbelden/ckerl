@@ -121,7 +121,7 @@ def test_squeeze_invalid_length():
 def test_all_bytes():
     for i in range(-128, 128):
         in_bytes = [i] * 48
-        trits = conv.convertToTrits(in_bytes)
+        trits = conv.bytes_to_trits(in_bytes)
         out_bytes = conv.trits_to_bytes(trits)
 
         assert in_bytes == out_bytes
@@ -131,7 +131,7 @@ def test_random_trits():
     in_trits = [random.randrange(-1, 2) for _ in range(243)]
     in_trits[242] = 0
     in_bytes = conv.trits_to_bytes(in_trits)
-    out_trits = conv.convertToTrits(in_bytes)
+    out_trits = conv.bytes_to_trits(in_bytes)
 
     assert in_trits == out_trits
 

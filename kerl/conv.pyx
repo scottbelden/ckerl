@@ -3,6 +3,7 @@ from libc.stdlib cimport malloc, free
 
 DEF BYTE_HASH_LENGTH = 48
 DEF TRIT_HASH_LENGTH = 243
+DEF BASE3 = 3
 
 tryte_table = {
         '9': [ 0,  0,  0],  #   0
@@ -53,10 +54,57 @@ def trits_to_trytes(trits):
 
     return ''.join(trytes)
 
-def convertToTrits(bytes_k):
-    bigInt = convertBytesToBigInt(bytes_k)
-    trits = convertBigintToBase(bigInt, 3, TRIT_HASH_LENGTH)
-    return trits
+def bytes_to_trits(bytes_k):
+    cdef int i
+
+    cdef int bytesArray[BYTE_HASH_LENGTH]
+    for i in range(BYTE_HASH_LENGTH):
+        bytesArray[i] = bytes_k[i]
+
+    # number sign in MSB
+    cdef int signum = (1 if bytesArray[0] >= 0 else -1)
+
+    cdef int sub
+    if signum == -1:
+        # sub1
+        for i in range((BYTE_HASH_LENGTH - 1), -1, -1):
+            sub = (bytesArray[i] & 0xFF) - 1
+            bytesArray[i] = (sub if sub <= 0x7F else sub - 0x100)
+            if bytesArray[i] != -1:
+                break
+
+        # 1-complement
+        for i in range(BYTE_HASH_LENGTH):
+            bytesArray[i] = ~bytesArray[i]
+
+    # sum magnitudes and set sign
+    bigInt = sum((x & 0xFF) << pos * 8 for (pos, x) in
+               enumerate(reversed(bytesArray))) * signum
+
+    result = []
+
+    cdef int is_negative = bigInt < 0
+    quotient = abs(bigInt)
+
+    cdef int MAX = (BASE3 - 1) // 2
+    if is_negative:
+        MAX = BASE3 // 2
+
+    cdef remainder
+    for i in range(TRIT_HASH_LENGTH):
+        quotient, remainder = divmod(quotient, BASE3)
+
+        if remainder > MAX:
+            # Lend 1 to the next place so we can make this digit negative.
+            quotient += 1
+            remainder -= BASE3
+
+        if is_negative:
+            remainder = remainder * -1
+
+        result.append(remainder)
+
+    return result
 
 def trits_to_bytes(trits):
     cdef int *trits_array
@@ -183,7 +231,7 @@ def trits_to_bytes(trits):
             bytesArray[i] = ~bytesArray[i]
 
         # add 1
-        for i in range(47, -1, -1):
+        for i in range((BYTE_HASH_LENGTH - 1), -1, -1):
             add = (bytesArray[i] & 0xFF) + 1
             if add <= 0x7F:
                 bytesArray[i] = add
@@ -193,54 +241,6 @@ def trits_to_bytes(trits):
                 break
 
     return bytesArray
-
-def convertBytesToBigInt(ba):
-    # copy of array
-    bytesArray = list(map(lambda x: x, ba))
-
-    # number sign in MSB
-    signum = (1 if bytesArray[0] >= 0 else -1)
-
-    if signum == -1:
-        # sub1
-        for pos in reversed(range(len(bytesArray))):
-            sub = (bytesArray[pos] & 0xFF) - 1
-            bytesArray[pos] = (sub if sub <= 0x7F else sub - 0x100)
-            if bytesArray[pos] != -1:
-                break
-
-        # 1-compliment
-        bytesArray = list(map(lambda x: ~x, bytesArray))
-
-    # sum magnitudes and set sign
-    return sum((x & 0xFF) << pos * 8 for (pos, x) in
-               enumerate(reversed(bytesArray))) * signum
-
-def convertBigintToBase(bigInt, int base, int length):
-    result = []
-
-    cdef int is_negative = bigInt < 0
-    quotient = abs(bigInt)
-
-    cdef int MAX = (base-1) // 2
-    if is_negative:
-        MAX = base // 2
-
-    cdef int i, remainder
-    for i in range(length):
-        quotient, remainder = divmod(quotient, base)
-
-        if remainder > MAX:
-            # Lend 1 to the next place so we can make this digit negative.
-            quotient += 1
-            remainder -= base
-
-        if is_negative:
-            remainder = remainder * -1
-
-        result.append(remainder)
-
-    return result
 
 cdef int convert_sign(int byte):
     """
