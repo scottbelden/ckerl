@@ -62,10 +62,10 @@ def bytes_to_trits(bytes_k):
         bytesArray[i] = bytes_k[i]
 
     # number sign in MSB
-    cdef int signum = (1 if bytesArray[0] >= 0 else -1)
+    cdef int is_negative = (1 if bytesArray[0] < 0 else 0)
 
     cdef int sub
-    if signum == -1:
+    if is_negative:
         # sub1
         for i in range((BYTE_HASH_LENGTH - 1), -1, -1):
             sub = (bytesArray[i] & 0xFF) - 1
@@ -77,34 +77,49 @@ def bytes_to_trits(bytes_k):
         for i in range(BYTE_HASH_LENGTH):
             bytesArray[i] = ~bytesArray[i]
 
-    # sum magnitudes and set sign
-    bigInt = sum((x & 0xFF) << pos * 8 for (pos, x) in
-               enumerate(reversed(bytesArray))) * signum
+    # sum magnitudes
+    bigInt = 0
+    for i in range(BYTE_HASH_LENGTH):
+        bigInt += <object>(bytesArray[BYTE_HASH_LENGTH - 1 - i] & 0xFF) << i * 8
 
-    result = []
+    cdef int trits[TRIT_HASH_LENGTH]
+    trits[:] = [
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
-    cdef int is_negative = bigInt < 0
-    quotient = abs(bigInt)
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    ]
+
+    quotient = bigInt
 
     cdef int MAX = (BASE3 - 1) // 2
     if is_negative:
         MAX = BASE3 // 2
 
-    cdef remainder
+    cdef int remainder
     for i in range(TRIT_HASH_LENGTH):
-        quotient, remainder = divmod(quotient, BASE3)
+        remainder = quotient % BASE3
+        quotient = quotient // BASE3
 
         if remainder > MAX:
             # Lend 1 to the next place so we can make this digit negative.
             quotient += 1
             remainder -= BASE3
 
-        if is_negative:
-            remainder = remainder * -1
+        trits[i] = remainder
 
-        result.append(remainder)
+    if is_negative:
+        for i in range(TRIT_HASH_LENGTH):
+            trits[i] = trits[i] * -1
 
-    return result
+    return trits
 
 def trits_to_bytes(trits):
     cdef int *trits_array
