@@ -198,7 +198,6 @@ def trits_to_bytes(trits):
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     ]
 
-    cdef int max_byte_index = 0
     cdef int sign = 0
     cdef int carry = 0
     cdef int value, j
@@ -245,39 +244,23 @@ def trits_to_bytes(trits):
         # all the trits by the sign so we do that here as we process each trit
         trits_array[i] = trits_array[i] * sign
 
-        # Loop over the byte array and multiply each byte by 3. The
-        # max_byte_index keeps track of the highest index in the array that we
-        # should iterate to. For example, on the first loop through we will
-        # only have a value for the first byte in the array, so there's no need
-        # to multiply all the other 0 value bytes by 3.
-        carry = 0
+        # Loop over the byte array and multiply each byte by 3.
         for j in range(BYTE_HASH_LENGTH):
-            if j > max_byte_index:
-                break
+            little_endian_bytes[j] = little_endian_bytes[j] * 3
 
-            value = (little_endian_bytes[j] * 3) + carry
-
-            if value > 255:
-                max_byte_index = max(max_byte_index, j + 1)
-                carry = value // 256
-                value = value % 256
-            else:
-                carry = 0
-
-            little_endian_bytes[j] = value
-
+        # Add the next trit
         little_endian_bytes[0] += trits_array[i]
 
-        # Handle any overflows or underflows from the previous addition.
-        for j in range(max_byte_index):
-            if trits_array[i] == 1 and little_endian_bytes[j] == 256:
-                little_endian_bytes[j] = 0
-                little_endian_bytes[j+1] += 1
-            elif trits_array[i] == -1 and little_endian_bytes[j] == -1:
-                little_endian_bytes[j] = 255
-                little_endian_bytes[j+1] -= 1
-            else:
-                break
+        # Every 9 iterations go through and fix up the byte array. We need to
+        # make sure that we do this frequently enough so that the values in the
+        # byte array don't reach the max value for an int. At the same time, we
+        # don't do this every iteration because it is fairly expensive.
+        if ((i + 1) % 9 == 0):
+            for j in range(BYTE_HASH_LENGTH):
+                value = little_endian_bytes[j]
+                if (value > 255) or (value < 0):
+                    little_endian_bytes[j+1] += value // 256
+                    little_endian_bytes[j] = value % 256
 
     free(trits_array)
 
