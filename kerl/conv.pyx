@@ -54,6 +54,7 @@ def trits_to_trytes(trits):
 
     return ''.join(trytes)
 
+@cython.boundscheck(False)
 def bytes_to_trits(bytes_k):
     cdef int i
 
@@ -77,11 +78,7 @@ def bytes_to_trits(bytes_k):
         for i in range(BYTE_HASH_LENGTH):
             bytesArray[i] = ~bytesArray[i]
 
-    # sum magnitudes
-    bigInt = 0
-    for i in range(BYTE_HASH_LENGTH):
-        bigInt += <object>(bytesArray[BYTE_HASH_LENGTH - 1 - i] & 0xFF) << i * 8
-
+    # This structure will hold the resulting trits
     cdef int trits[TRIT_HASH_LENGTH]
     trits[:] = [
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -97,27 +94,83 @@ def bytes_to_trits(bytes_k):
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     ]
 
-    quotient = bigInt
+    # The padded_trits is five trits longer than the actual trits buffer and
+    # is used to help with multiplication. In the algorithm below we will need
+    # multiply our current trit value by 256. To do this, we convert 256 into
+    # balanced ternary and get [1, 0, 0, 1, 1, 1] and then multiply like so:
+    # https://en.wikipedia.org/wiki/Balanced_ternary#Multi-trit_multiplication
+    #
+    # This multiplication is the same as taking our original array, copying it
+    # four times, and shifting it the appropriate number of trits. Using the
+    # padded trits array and the memory views makes this fairly easy.
+    cdef int padding = 5
+    cdef int padded_trits[248]
+    padded_trits[:] = [
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
-    cdef int MAX = (BASE3 - 1) // 2
-    if is_negative:
-        MAX = BASE3 // 2
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
-    cdef int remainder
-    for i in range(TRIT_HASH_LENGTH):
-        remainder = quotient % BASE3
-        quotient = quotient // BASE3
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
-        if remainder > MAX:
-            # Lend 1 to the next place so we can make this digit negative.
-            quotient += 1
-            remainder -= BASE3
+        0, 0, 0, 0, 0,
+    ]
 
-        trits[i] = remainder
+    cdef int[:] padded_trits_view = padded_trits
+    cdef int[:] temp0 = padded_trits_view[padding:]
+    cdef int[:] temp1 = padded_trits_view[padding-1:-1]
+    cdef int[:] temp2 = padded_trits_view[padding-2:-2]
+    cdef int[:] temp3 = padded_trits_view[padding-5:-5]
+
+    cdef int byte_index, remainder, value, carry
+    cdef int max_trit_index = padding
+
+    for byte_index in range(BYTE_HASH_LENGTH):
+
+        for i in range(min(TRIT_HASH_LENGTH, max_trit_index)):
+            trits[i] = temp0[i] + temp1[i] + temp2[i] + temp3[i]
+
+        max_trit_index += padding + 1
+
+        trits[0] += bytesArray[byte_index] & 0xFF
+
+        # Every 8 iterations go through and fix up the trit array. We need to
+        # make sure that we do this frequently enough so that the values in the
+        # trit array don't reach the max value for an int. At the same time, we
+        # don't do this every iteration because it is fairly expensive.
+        if ((byte_index + 1) % 8 == 0):
+            carry = 0
+            for i in range(min(TRIT_HASH_LENGTH, max_trit_index)):
+                value = trits[i] + carry
+
+                if (value > 1) or (value < -1):
+                    remainder = value % 3
+                    carry = value // 3
+
+                    if remainder > 1:
+                        remainder = -1
+                        carry += 1
+
+                    padded_trits[i+padding] = remainder
+
+                else:
+                    padded_trits[i+padding] = value
+                    carry = 0
+        else:
+            for i in range(min(TRIT_HASH_LENGTH, max_trit_index)):
+                padded_trits[i+padding] = trits[i]
 
     if is_negative:
         for i in range(TRIT_HASH_LENGTH):
-            trits[i] = trits[i] * -1
+            trits[i] = padded_trits[i+padding] * -1
+    else:
+        for i in range(TRIT_HASH_LENGTH):
+            trits[i] = padded_trits[i+padding]
 
     return trits
 
