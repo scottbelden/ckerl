@@ -2,6 +2,10 @@
 
 Cython implementation of the Kerl hash function
 
+# Install
+
+`pip install ckerl`
+
 # Example
 
 ```python
