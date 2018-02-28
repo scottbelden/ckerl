@@ -24,8 +24,8 @@ if os.getenv('CYTHON_PROFILE'):
     get_directive_defaults()['profile'] = True
 
 ext_modules = [
-    Extension('kerl.kerl', ['kerl/kerl' + ext], define_macros=macros),
-    Extension('kerl.conv', ['kerl/conv' + ext], define_macros=macros),
+    Extension('ckerl.kerl', ['ckerl/kerl' + ext], define_macros=macros),
+    Extension('ckerl.conv', ['ckerl/conv' + ext], define_macros=macros),
 ]
 
 setup_dir = abspath(dirname(__file__))
@@ -33,15 +33,15 @@ with open(join(setup_dir, 'requirements.txt')) as fp:
     install_requires = fp.readlines()
 
 setup(
-    name = 'kerl',
+    name = 'ckerl',
     description = 'Cython implementation of Kerl',
-    url = 'https://github.com/scottbelden/kerl',
+    url = 'https://github.com/scottbelden/ckerl',
     version = '1.0.0',
-    packages = ['kerl'],
+    packages = ['ckerl'],
     ext_modules = ext_modules,
     install_requires = install_requires,
-    include_package_data  = True,
+    include_package_data = True,
     license = 'MIT',
-    author        = 'Scott Belden',
-    author_email  = 'scottabelden@gmail.com',
+    author = 'Scott Belden',
+    author_email = 'scottabelden@gmail.com',
 )

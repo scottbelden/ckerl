@@ -5,8 +5,8 @@ import sha3
 
 import pytest
 
-from kerl import conv
-from kerl.kerl import Kerl
+from ckerl import conv
+from ckerl.kerl import Kerl
 
 
 @pytest.fixture

@@ -11,13 +11,13 @@ endif
 	cython $(<D)/$(<F)
 	cython -a $(<D)/$(<F)
 
-c_files = kerl/conv.c kerl/kerl.c
+c_files = ckerl/conv.c ckerl/kerl.c
 
 all: $(c_files)
 
 clean:
 	rm -fv $(c_files)
-	rm -fv kerl/*.so
+	rm -fv ckerl/*.so
 
 fresh: clean all
 

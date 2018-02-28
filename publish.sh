@@ -12,7 +12,7 @@ rm -rf dist/
 make fresh
 USE_CYTHON=1 python setup.py sdist
 
-twine upload dist/kerl-${version}.tar.gz
+twine upload dist/ckerl-${version}.tar.gz
 
 git tag -f ${version}
 git push

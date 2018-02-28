@@ -1,12 +1,12 @@
-# kerl
+# ckerl
 
 Cython implementation of the Kerl hash function
 
 # Example
 
 ```python
-from kerl import Kerl
-from kerl import trytes_to_trits, trits_to_trytes
+from ckerl import Kerl
+from ckerl import trytes_to_trits, trits_to_trytes
 
 k = Kerl()
 

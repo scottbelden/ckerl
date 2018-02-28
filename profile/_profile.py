@@ -2,8 +2,8 @@ import csv
 import time
 import os
 
-from kerl import conv
-from kerl.kerl import Kerl
+from ckerl import conv
+from ckerl.kerl import Kerl
 
 dir_path = os.path.dirname(__file__)
 
